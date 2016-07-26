@@ -1,9 +1,16 @@
-# Example SNES Project
+# SNES Proejects
 
-This is an example project for SNES Assembly, that compiles into an SMC ROM file
+Those are basic SNES projects I am working on to familiraize myself with SNES
+assembly.
 
 It requires [WLA-DX](https://github.com/vhelin/wla-dx) by [Vile Helin](https://github.com/vhelin).
 
-Build with `make`. This will result in a **Greenspace.smc** file. If you run
-this file in an emulator, it should display a green background. If it doesn't,
-something went wrong.
+Build any project with `make`. It will result in an SMC file you can use in an
+emulator like ZSNES or Higan.
+
+Greenspace is a simple demo meant to validate that my environment is
+correctly setup. If it works displays a green screen.
+
+Checkered is a test I was doing with 16x16 background tiles. They weird setup
+got me scratching my head a bit. Each tile is composed of 4 squares with
+different shades of grey, giving a result that looks like a chess pattern.
