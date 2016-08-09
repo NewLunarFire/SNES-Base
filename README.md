@@ -1,6 +1,6 @@
-# SNES Proejects
+# SNES Projects
 
-Those are basic SNES projects I am working on to familiraize myself with SNES
+Those are basic SNES projects I am working on to familiarize myself with SNES
 assembly.
 
 It requires [WLA-DX](https://github.com/vhelin/wla-dx) by [Vile Helin](https://github.com/vhelin).

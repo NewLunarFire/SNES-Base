@@ -1,3 +1,5 @@
 process-palette.json
 *.obj
 *.smc
+*.cgr
+*.vra

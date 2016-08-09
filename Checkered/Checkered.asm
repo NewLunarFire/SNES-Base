@@ -1,105 +1,87 @@
 .include "Header.inc"
 .include "Snes_Init.asm"
+.include "Registers.inc"
 
 VBlank:    ; Needed to satisfy interrupt definition in "header.inc"
-    RTI
+    rti
 
 Start:
   ; Initialize the SNES.
   Snes_Init
 
-  sep #$20        ; Set the A register to 8-bit.
-  rep #$10
+  sep #$20  ; Set the A register to 8-bit.
+  rep #$10  ; Set Index Registers to 16-bit
 
   lda #$10
-  sta $2105
-  lda #$08            ; Set BG1's Tile Map offset to $0400 (Word address)
-  sta $2107           ; And the Tile Map size to 32x32
-  stz $210B           ; Set BG1's Character VRAM offset to $0000 (word address)
+  sta BGMODE
+
+  lda #$08            ; Set BG1's Tile Map offset to $0800 (Word address)
+  sta BG1SC           ; And the Tile Map size to 32x32
+  stz BG12NBA           ; Set BG1's Character VRAM offset to $0000 (word address)
 
   lda #$01            ; Enable BG1
-  sta $212C
+  sta TM
 
-  lda #$FF
-  sta $210E
-  sta $210E
+  stz CGADD ; Set CGRAM Address to 0
+  ldx #Palette ; Load Palette address
+  ldy #8 ; 4 Color (8 bytes) to transfer
+  jsr DMACGRAM
 
-  jsr DMAPalette
-  jsr DMATile1
-  jsr DMATile2
+  ldx #0
+  stx VMADDL ; Set VRAM Address to 0
+  ldx #ChessPattern ; Load Tile Address
+  ldy #288 ; 288 bytes to transfer
+  jsr DMAVRAM
 
-  lda     #15  ; End VBlank, setting brightness to 15 (100%).
-  sta     $2100
+  ldx #$0800
+  stx VMADDL
+  ldx #OAMData
+  ldy #1024
+  jsr DMAOAM
+
+  lda #15  ; End VBlank, setting brightness to 15 (100%).
+  sta INIDISP
 
   ; Loop forever.
 Forever:
   jmp Forever
 
-DMAPalette:
-  stz $2121 ; Set CGRAM Address to 0
-  stz $4300 ; Set DMA Mode (byte, increment)
+; Prepare DMA to CGRAM
+DMACGRAM:
+  stz DMAP0 ; Set DMA Mode (byte, increment)
   lda #$22
-  sta $4301 ; Write to CGRAM ($2122)
-  ldx #Palette
-  stx $4302 ; Write Source Address
-  stz $4304 ; Take from Bank 0
-  ldx #8
-  stx $4305 ; 4 Bytes to transfer (2 colors)
+  sta BBAD0 ; Write to CGRAM ($2122)
+  jmp DMA
 
-  lda #$01
-  sta $420B ; Initiate CGRAM DMA Transfer
-
-  rts
-
-DMATile1:
+; Prepare DMA to VRAM
+DMAVRAM:
   lda #$80
-  sta $2115 ; Set Word Write mode to VRAM (increment after $2119)
-  stz $2116
-  stz $2117 ; Set VRAM Address to 0
+  sta VMAIN ; Set Word Write mode to VRAM (increment after $2119)
 
   lda #$01
-  sta $4300 ; Set DMA Mode (word, increment)
+  sta DMAP0 ; Set DMA Mode (word, increment)
   lda #$18
-  sta $4301 ; Write to VRAM ($2118)
-  ldx #Tile1.W ; Load Tile Address
-  stx $4302 ; Write DMA Source Address
-  stz $4304 ; Take it from bank 0
-  ldx #32 ; Bytes to transfer
-  stx $4305
+  sta BBAD0 ; Write to VRAM ($2118)
+  jmp DMA
 
-  lda #$03
-  sta $420B ; Initiate VRAM DMA Transfer
+DMAOAM:
+  stz VMAIN ; Set Byte Write mode to VRAM (increment after $2118)
+  stz DMAP0 ; Set DMA Mode (byte, increment)
+  lda #$18
+  sta BBAD0 ; Write to VRAM ($2118)
 
+;Execute DMA
+DMA:
+  stz A1B0 ; Set Bank to 0
+  stx A1T0L ; Write Source address
+  sty DAS0L ; Write number of bytes
+  lda #$01
+  sta MDMAEN ; Initiate CGRAM DMA Transfer
   rts
-
-  DMATile2:
-    lda #$80
-    sta $2115 ; Set Word Write mode to VRAM (increment after $2119)
-    ldx #$0080
-    stx $2116 ; Set VRAM Address
-
-    lda #$01
-    sta $4300 ; Set DMA Mode (word, increment)
-    lda #$18
-    sta $4301 ; Write to VRAM ($2118)
-    ldx #Tile2.W ; Load Tile Address
-    stx $4302 ; Write DMA Source Address
-    stz $4304 ; Take it from bank 0
-    ldx #32 ; Bytes to transfer
-    stx $4305
-
-    lda #$03
-    sta $420B ; Initiate VRAM DMA Transfer
-
-    rts
 
 Palette:
-  .dw $0000, $2108, $4210, $6318
-
-Tile1:
-  .db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-  .db $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF
-
-Tile2:
-  .db $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00
-  .db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+  .incbin "ChessPattern.cgr"
+ChessPattern:
+  .incbin "ChessPattern.vra"
+OAMData:
+  .dsb 1024, $00
